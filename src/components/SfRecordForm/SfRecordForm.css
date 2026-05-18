@@ -1,0 +1,483 @@
+/* ─── SfRecordForm ─────────────────────────────────────────────────────────── */
+
+.sf-record-form {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #181818;
+  background: #fff;
+  border: 1px solid #dddbda;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.sf-record-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f3f3f3;
+  border-bottom: 1px solid #dddbda;
+}
+
+.sf-record-form__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sf-record-form__object-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #0176d3;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.sf-record-form__record-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #181818;
+}
+
+.sf-record-form__record-id {
+  font-size: 11px;
+  color: #706e6b;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.sf-record-form__dirty {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #ff9a3c;
+  border-radius: 50%;
+  margin-left: 2px;
+}
+
+/* ── Mode toggle ─────────────────────────────────────────────────────────────── */
+.sf-record-form__mode-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.sf-record-form__mode-btn {
+  padding: 5px 14px;
+  font-size: 12px;
+  border: 1px solid #dddbda;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  color: #444;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sf-record-form__mode-btn:hover {
+  background: #f3f3f3;
+}
+
+.sf-record-form__mode-btn--active {
+  background: #0176d3;
+  color: #fff;
+  border-color: #0176d3;
+}
+
+.sf-record-form__mode-btn--active:hover {
+  background: #0164b3;
+}
+
+/* ── Field grid ──────────────────────────────────────────────────────────────── */
+.sf-record-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.sf-record-form__grid--1col {
+  grid-template-columns: 1fr;
+}
+
+.sf-record-form__field {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0eeec;
+  border-right: 1px solid #f0eeec;
+}
+
+.sf-record-form__field:nth-child(even) {
+  border-right: none;
+}
+
+.sf-record-form__field--full {
+  grid-column: 1 / -1;
+  border-right: none;
+}
+
+/* ── Field label ──────────────────────────────────────────────────────────────── */
+.sf-record-form__field-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #706e6b;
+  margin-bottom: 4px;
+}
+
+.sf-record-form__required-star {
+  color: #c23934;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── FLS indicator ───────────────────────────────────────────────────────────── */
+.sf-record-form__fls-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sf-record-form__fls-dot--rw    { background: #2e7d32; }
+.sf-record-form__fls-dot--ro    { background: #f59e0b; }
+.sf-record-form__fls-dot--none  { background: #c0392b; }
+
+/* ── View value ───────────────────────────────────────────────────────────────── */
+.sf-record-form__field-value {
+  font-size: 14px;
+  color: #181818;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.sf-record-form__field-value--empty {
+  color: #aeacab;
+  font-style: italic;
+}
+
+.sf-record-form__field-value a {
+  color: #0176d3;
+  text-decoration: none;
+}
+
+.sf-record-form__field-value a:hover {
+  text-decoration: underline;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────────────────────── */
+.sf-record-form__input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid #dddbda;
+  border-radius: 4px;
+  background: #fff;
+  color: #181818;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  box-sizing: border-box;
+}
+
+.sf-record-form__input:hover {
+  border-color: #b0adab;
+}
+
+.sf-record-form__input:focus {
+  border-color: #0176d3;
+  box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.25);
+}
+
+.sf-record-form__input--readonly {
+  background: #f3f3f3;
+  color: #706e6b;
+  cursor: not-allowed;
+}
+
+.sf-record-form__input--error {
+  border-color: #c23934;
+  box-shadow: 0 0 0 3px rgba(194, 57, 52, 0.2);
+}
+
+.sf-record-form__textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+/* ── Checkbox ────────────────────────────────────────────────────────────────── */
+.sf-record-form__checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sf-record-form__checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #0176d3;
+}
+
+/* ── Picklist ────────────────────────────────────────────────────────────────── */
+.sf-record-form__picklist-wrap {
+  position: relative;
+}
+
+.sf-record-form__picklist-wrap select {
+  appearance: none;
+  width: 100%;
+  padding: 6px 28px 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid #dddbda;
+  border-radius: 4px;
+  background: #fff;
+  color: #181818;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.sf-record-form__picklist-wrap select:hover {
+  border-color: #b0adab;
+}
+
+.sf-record-form__picklist-wrap select:focus {
+  border-color: #0176d3;
+  box-shadow: 0 0 0 3px rgba(1, 118, 211, 0.25);
+}
+
+.sf-record-form__picklist-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #706e6b;
+  font-size: 13px;
+}
+
+/* ── Lookup field ────────────────────────────────────────────────────────────── */
+.sf-record-form__lookup-wrap {
+  position: relative;
+}
+
+.sf-record-form__lookup-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sf-record-form__lookup-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #dddbda;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  color: #444;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+
+.sf-record-form__lookup-btn:hover {
+  background: #f3f3f3;
+}
+
+.sf-record-form__lookup-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #dddbda;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 999;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.sf-record-form__lookup-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0eeec;
+  transition: background 0.08s;
+}
+
+.sf-record-form__lookup-item:last-child {
+  border-bottom: none;
+}
+
+.sf-record-form__lookup-item:hover {
+  background: #f0f4ff;
+}
+
+.sf-record-form__lookup-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e8f0fe;
+  color: #0176d3;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px solid #b3d1f8;
+  font-weight: 500;
+}
+
+.sf-record-form__lookup-chip-remove {
+  cursor: pointer;
+  color: #706e6b;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.sf-record-form__lookup-chip-remove:hover {
+  color: #c23934;
+}
+
+/* ── Field-level validation error ────────────────────────────────────────────── */
+.sf-record-form__field-error {
+  font-size: 11px;
+  color: #c23934;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────────── */
+.sf-record-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid #dddbda;
+  background: #f3f3f3;
+}
+
+.sf-record-form__footer-meta {
+  font-size: 11px;
+  color: #706e6b;
+}
+
+.sf-record-form__footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sf-record-form__btn-cancel {
+  padding: 7px 16px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid #dddbda;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  color: #444;
+  transition: background 0.12s;
+}
+
+.sf-record-form__btn-cancel:hover {
+  background: #f3f3f3;
+}
+
+.sf-record-form__btn-save {
+  padding: 7px 20px;
+  font-size: 13px;
+  font-family: inherit;
+  border: none;
+  border-radius: 4px;
+  background: #0176d3;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.sf-record-form__btn-save:hover:not(:disabled) {
+  background: #0164b3;
+}
+
+.sf-record-form__btn-save:disabled {
+  background: #7ab3e0;
+  cursor: not-allowed;
+}
+
+/* ── Skeleton loading ─────────────────────────────────────────────────────────── */
+.sf-record-form__skeleton {
+  background: #f3f3f3;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #dddbda;
+}
+
+.sf-record-form__skeleton-header {
+  height: 50px;
+  background: #e8e8e8;
+  margin-bottom: 0;
+  border-bottom: 1px solid #dddbda;
+}
+
+.sf-record-form__skeleton-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+}
+
+.sf-record-form__skeleton-field {
+  padding: 12px 16px;
+}
+
+.sf-record-form__skeleton-label {
+  height: 10px;
+  width: 60%;
+  background: linear-gradient(90deg, #e8e8e8 25%, #d4d4d4 50%, #e8e8e8 75%);
+  background-size: 200% 100%;
+  animation: sf-shimmer 1.4s infinite;
+  border-radius: 3px;
+  margin-bottom: 8px;
+}
+
+.sf-record-form__skeleton-value {
+  height: 14px;
+  width: 85%;
+  background: linear-gradient(90deg, #e8e8e8 25%, #d4d4d4 50%, #e8e8e8 75%);
+  background-size: 200% 100%;
+  animation: sf-shimmer 1.4s infinite;
+  border-radius: 3px;
+}
+
+@keyframes sf-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Error state ─────────────────────────────────────────────────────────────── */
+.sf-record-form__error-state {
+  padding: 24px 16px;
+  text-align: center;
+  color: #c23934;
+}
+
+.sf-record-form__error-state p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #706e6b;
+}

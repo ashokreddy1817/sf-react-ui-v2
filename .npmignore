@@ -1,0 +1,7 @@
+src/
+example/
+node_modules/
+rollup.config.js
+tsconfig.json
+*.log
+.DS_Store
