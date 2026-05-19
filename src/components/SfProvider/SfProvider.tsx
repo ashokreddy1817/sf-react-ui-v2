@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { SalesforceApiClient } from '../../utils/apiClient';
 import type {
   SfContextValue, SfProviderConfig, SfObjectInfo, SfRecord,
-  SfPicklistValue, LookupResult, LayoutType, LayoutMode,
+  SfPicklistValue, LookupResult, LayoutType, LayoutMode, SfRelatedListInfo,
 } from '../../types';
 
 const SfContext = createContext<SfContextValue | null>(null);
@@ -33,14 +33,17 @@ export function SfProvider({ orgUrl, apiVersion = '59.0', accessToken, onAuthErr
 
     return {
       config: { orgUrl, apiVersion, accessToken, onAuthError },
-      getObjectInfo:    (o) =>             withAuth(client.getObjectInfo(o)),
-      getRecord:        (o, id, f) =>      withAuth(client.getRecord(o, id, f)),
-      getRecordLayout:  (o, rt, lt, m) =>  withAuth(client.getRecordLayout(o, rt, lt, m)),
-      getCompactLayout: (o, rt) =>         withAuth(client.getCompactLayout(o, rt)),
-      createRecord:     (o, d) =>          withAuth(client.createRecord(o, d)),
-      updateRecord:     (o, id, d) =>      withAuth(client.updateRecord(o, id, d)),
-      getPicklistValues:(o, rt, f) =>      client.getPicklistValues(o, rt, f),
-      searchRecords:    (o, q, l) =>       client.searchRecords(o, q, l),
+      getObjectInfo:         (o) =>             withAuth(client.getObjectInfo(o)),
+      getRecord:             (o, id, f) =>      withAuth(client.getRecord(o, id, f)),
+      getRecordLayout:       (o, rt, lt, m) =>  withAuth(client.getRecordLayout(o, rt, lt, m)),
+      getCompactLayout:      (o, rt) =>         withAuth(client.getCompactLayout(o, rt)),
+      createRecord:          (o, d) =>          withAuth(client.createRecord(o, d)),
+      updateRecord:          (o, id, d) =>      withAuth(client.updateRecord(o, id, d)),
+      getPicklistValues:     (o, rt, f) =>      client.getPicklistValues(o, rt, f),
+      searchRecords:         (o, q, l) =>       client.searchRecords(o, q, l),
+      // [FIXED] These two were missing — they caused TS2739 at build time
+      getRelatedListInfo:    (parentObj, listId) => withAuth(client.getRelatedListInfo(parentObj, listId)),
+      getRelatedListRecords: (parentId, listId, fields) => withAuth(client.getRelatedListRecords(parentId, listId, fields)),
     };
   }, [client, orgUrl, apiVersion, accessToken, onAuthError]);
 

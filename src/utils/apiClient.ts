@@ -7,10 +7,11 @@
  *  - getCompactLayout: correct endpoint /ui-api/compact-layouts/:object
  *    NOTE: compact layout endpoint does NOT take recordTypeId in path on all orgs
  *  - All layout fallbacks return graceful empty array
+ *  - [FIXED] Added getRelatedListInfo and getRelatedListRecords to satisfy SfContextValue
  */
 
 import type {
-  SfObjectInfo, SfRecord, SfPicklistValue, SfError, LookupResult,
+  SfObjectInfo, SfRecord, SfPicklistValue, SfError, LookupResult, SfRelatedListInfo,
 } from '../types';
 
 export type LayoutType = 'Full' | 'Compact';
@@ -258,7 +259,52 @@ export class SalesforceApiClient {
     return result;
   }
 
-  // ── Related Records ──────────────────────────────────────────────────────────
+  // ── Related List Info ────────────────────────────────────────────────────────
+  // [NEW] Uses /ui-api/related-list-info/:parentObjectName/:relatedListId
+  async getRelatedListInfo(parentObjectName: string, relatedListId: string): Promise<SfRelatedListInfo> {
+    const key = `relatedListInfo:${parentObjectName}:${relatedListId}`;
+    if (this.cache.has(key)) return this.cache.get(key) as SfRelatedListInfo;
+
+    const raw = await this.request<Record<string, unknown>>(
+      `/ui-api/related-list-info/${parentObjectName}/${relatedListId}`
+    );
+
+    const columns = ((raw.displayColumns as Array<{ fieldApiName: string }>) ?? [])
+      .map(c => c.fieldApiName)
+      .filter(Boolean);
+
+    const info: SfRelatedListInfo = {
+      id:      raw.relatedListId as string ?? relatedListId,
+      label:   raw.label as string ?? relatedListId,
+      columns,
+    };
+
+    this.cache.set(key, info);
+    return info;
+  }
+
+  // ── Related List Records ─────────────────────────────────────────────────────
+  // [NEW] Uses /ui-api/related-list-records/:parentRecordId/:relatedListId
+  async getRelatedListRecords(
+    parentRecordId: string,
+    relatedListId: string,
+    fields: string[]
+  ): Promise<Record<string, unknown>[]> {
+    const fieldParam = fields.length > 0 ? `?fields=${fields.join(',')}` : '';
+    const raw = await this.request<{
+      records: Array<{
+        fields: Record<string, { value: unknown; displayValue: string | null }>;
+      }>;
+    }>(`/ui-api/related-list-records/${parentRecordId}/${relatedListId}${fieldParam}`);
+
+    return (raw.records ?? []).map(r =>
+      Object.fromEntries(
+        Object.entries(r.fields).map(([k, v]) => [k, v.displayValue ?? v.value])
+      )
+    );
+  }
+
+  // ── Related Records (legacy — SOQL-based) ────────────────────────────────────
   async getRelatedRecords(
     objectName: string,
     recordId: string,
