@@ -3,23 +3,19 @@
 import type { ReactNode } from 'react';
 
 // ─── Field-level security ─────────────────────────────────────────────────────
-
 export type FlsAccess = 'ReadWrite' | 'ReadOnly' | 'NoAccess';
 
 // ─── Layout types ─────────────────────────────────────────────────────────────
-
 export type LayoutType = 'Full' | 'Compact';
 export type LayoutMode = 'View' | 'Edit' | 'Create';
 
-// ─── Field value (as returned by UI API records endpoint) ────────────────────
-
+// ─── Field value ──────────────────────────────────────────────────────────────
 export interface SfFieldValue {
   value: string | number | boolean | null;
   displayValue: string | null;
 }
 
 // ─── Record ───────────────────────────────────────────────────────────────────
-
 export interface SfRecord {
   id: string;
   apiName: string;
@@ -30,7 +26,6 @@ export interface SfRecord {
 }
 
 // ─── Error ────────────────────────────────────────────────────────────────────
-
 export interface SfError {
   message: string;
   statusCode?: number;
@@ -39,7 +34,6 @@ export interface SfError {
 }
 
 // ─── Field metadata ───────────────────────────────────────────────────────────
-
 export type SfFieldDataType =
   | 'string' | 'textarea' | 'boolean'
   | 'int' | 'double' | 'number' | 'currency' | 'percent'
@@ -60,11 +54,9 @@ export interface SfFieldMetadata {
   picklistValues?: SfPicklistValue[];
 }
 
-// Backwards-compatible alias
 export type SfFieldInfo = SfFieldMetadata;
 
 // ─── Picklist ─────────────────────────────────────────────────────────────────
-
 export interface SfPicklistValue {
   label: string;
   value: string;
@@ -73,7 +65,6 @@ export interface SfPicklistValue {
 }
 
 // ─── Record type ──────────────────────────────────────────────────────────────
-
 export interface SfRecordTypeInfo {
   recordTypeId: string;
   name: string;
@@ -82,7 +73,6 @@ export interface SfRecordTypeInfo {
 }
 
 // ─── Object info ──────────────────────────────────────────────────────────────
-
 export interface SfObjectInfo {
   apiName: string;
   label: string;
@@ -94,15 +84,20 @@ export interface SfObjectInfo {
 }
 
 // ─── Lookup result ────────────────────────────────────────────────────────────
-
 export interface LookupResult {
   id: string;
   name: string;
   subtitle?: string;
 }
 
-// ─── Context ──────────────────────────────────────────────────────────────────
+// ─── Related list info ────────────────────────────────────────────────────────
+export interface SfRelatedListInfo {
+  id: string;
+  label: string;
+  columns: string[];
+}
 
+// ─── Context ──────────────────────────────────────────────────────────────────
 export interface SfProviderConfig {
   orgUrl: string;
   apiVersion?: string;
@@ -112,93 +107,28 @@ export interface SfProviderConfig {
 
 export interface SfContextValue {
   config: SfProviderConfig;
-
   getObjectInfo: (objectName: string) => Promise<SfObjectInfo>;
-
-  getRecord: (
-    objectName: string,
-    recordId: string,
-    fields: string[]
-  ) => Promise<SfRecord>;
-
-  /**
-   * Fetches Full page layout field list in admin-defined order.
-   * recordTypeId is placed in the URL path (not query string).
-   * layoutType defaults to 'Full'; pass 'Compact' only when you need
-   * the compact variant via this endpoint (prefer getCompactLayout instead).
-   *
-   * URL: /ui-api/layout/:objectName/:recordTypeId?layoutType=Full&mode=View
-   */
-  getRecordLayout: (
-    objectName: string,
-    recordTypeId: string,
-    layoutType?: LayoutType,
-    mode?: LayoutMode
-  ) => Promise<string[]>;
-
-  /**
-   * Fetches Compact layout field list (4-8 highlight fields).
-   * Used when layoutType="Compact" on SfRecordForm.
-   * Mirrors lightning-record-form layout="Compact".
-   *
-   * URL: /ui-api/compact-layouts/:objectName/:recordTypeId
-   */
-  getCompactLayout: (
-    objectName: string,
-    recordTypeId: string
-  ) => Promise<string[]>;
-
-  createRecord: (
-    objectName: string,
-    data: Record<string, unknown>
-  ) => Promise<SfRecord>;
-
-  updateRecord: (
-    objectName: string,
-    recordId: string,
-    data: Record<string, unknown>
-  ) => Promise<SfRecord>;
-
-  getPicklistValues: (
-    objectName: string,
-    recordTypeId: string,
-    fieldName: string
-  ) => Promise<SfPicklistValue[]>;
-
-  searchRecords: (
-    objectName: string,
-    query: string,
-    limit?: number
-  ) => Promise<LookupResult[]>;
+  getRecord: (objectName: string, recordId: string, fields: string[]) => Promise<SfRecord>;
+  getRecordLayout: (objectName: string, recordTypeId: string, layoutType?: LayoutType, mode?: LayoutMode) => Promise<string[]>;
+  getCompactLayout: (objectName: string, recordTypeId: string) => Promise<string[]>;
+  createRecord: (objectName: string, data: Record<string, unknown>) => Promise<SfRecord>;
+  updateRecord: (objectName: string, recordId: string, data: Record<string, unknown>) => Promise<SfRecord>;
+  getPicklistValues: (objectName: string, recordTypeId: string, fieldName: string) => Promise<SfPicklistValue[]>;
+  searchRecords: (objectName: string, query: string, limit?: number) => Promise<LookupResult[]>;
+  getRelatedListInfo: (parentObjectName: string, relatedListId: string) => Promise<SfRelatedListInfo>;
+  getRelatedListRecords: (parentRecordId: string, relatedListId: string, fields: string[]) => Promise<Record<string, unknown>[]>;
 }
 
 // ─── SfRecordForm ─────────────────────────────────────────────────────────────
-
 export type SfFormMode = 'view' | 'edit' | 'create';
 
 export interface SfRecordFormProps {
   objectName: string;
   recordId?: string;
   mode?: SfFormMode;
-
-  /**
-   * Which Salesforce page layout to load.
-   * 'Full'    → standard full page layout, 2-column grid (default)
-   * 'Compact' → compact highlight panel layout, 1-column, 4-8 fields
-   *
-   * Directly mirrors lightning-record-form layout="Full" | layout="Compact"
-   */
   layoutType?: LayoutType;
-
-  /**
-   * Explicit list of field API names to display.
-   * When provided, skips layout API fetch entirely.
-   */
   fields?: string[];
-
-  /** Number of grid columns. Ignored when layoutType="Compact" (always 1). */
   columns?: 1 | 2;
-
   lockMode?: boolean;
   hideFooter?: boolean;
   hideHeader?: boolean;
@@ -225,7 +155,6 @@ export interface SfRecordFormRef {
 }
 
 // ─── SfProvider ───────────────────────────────────────────────────────────────
-
 export interface SfProviderProps {
   orgUrl: string;
   accessToken?: string;
@@ -235,7 +164,6 @@ export interface SfProviderProps {
 }
 
 // ─── SfDataTable ──────────────────────────────────────────────────────────────
-
 export type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'default';
 
 export type SfColumnType =
@@ -274,4 +202,63 @@ export interface SfDataTableProps {
   selectedRows?: string[];
   onSelectionChange?: (selectedIds: string[]) => void;
   emptyMessage?: string;
+}
+
+// ─── SfLookupField ────────────────────────────────────────────────────────────
+export interface SfLookupFieldProps {
+  objectApiName: string;
+  fieldApiName?: string;
+  label?: string;
+  value?: string;
+  displayValue?: string;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  readOnly?: boolean;
+  debounceMs?: number;
+  minChars?: number;
+  maxResults?: number;
+  subtitle?: string;
+  onChange?: (id: string, name: string, result: LookupResult | undefined) => void;
+  onClear?: () => void;
+  onError?: (error: { message: string }) => void;
+  className?: string;
+}
+
+// ─── SfPicklistSelect ─────────────────────────────────────────────────────────
+export interface SfPicklistSelectProps {
+  objectApiName: string;
+  fieldApiName: string;
+  recordTypeId?: string;
+  label?: string;
+  value?: string | string[];
+  multiple?: boolean;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  readOnly?: boolean;
+  filterByController?: string | null;
+  onChange?: (value: string | string[], values: string[]) => void;
+  onError?: (error: { message: string }) => void;
+  className?: string;
+}
+
+// ─── SfRelatedList ────────────────────────────────────────────────────────────
+export interface SfRelatedListProps {
+  parentRecordId: string;
+  parentObjectName: string;
+  relatedListId: string;
+  columns?: string[];
+  title?: string;
+  pageSize?: number;
+  sortable?: boolean;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
+  actions?: SfRowAction[];
+  showNewButton?: boolean;
+  newButtonLabel?: string;
+  onRowAction?: (actionName: string, row: Record<string, unknown>) => void;
+  onNew?: () => void;
+  onError?: (error: { message: string }) => void;
+  className?: string;
 }
