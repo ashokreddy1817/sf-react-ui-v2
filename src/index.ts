@@ -1,42 +1,47 @@
-// src/index.ts — public API of @ashokreddy1828/sf-react-ui
+// src/index.ts — library entry point
 
 // ─── Components ───────────────────────────────────────────────────────────────
-export { SfProvider, useSfContext } from './components/SfProvider';
-export { SfRecordForm } from './components/SfRecordForm';
-
-// ─── Hooks ────────────────────────────────────────────────────────────────────
-export {
-  useObjectInfo,
-  useRecord,
-  usePicklistValues,
-  useLookupSearch,
-} from './hooks';
+export { SfProvider, useSfContext } from './components/SfProvider/SfProvider';
+export { SfRecordForm } from './components/SfRecordForm/SfRecordForm';
+export { SfDataTable } from './components/SfDataTable/SfDataTable';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type {
-  // Records & fields
-  SfRecord,
-  SfFieldValue,
-  SfFieldMetadata,
-  SfFieldInfo,       // alias for SfFieldMetadata (backwards compat)
-  SfFieldDataType,
-  FlsAccess,
-  // Picklist
-  SfPicklistValue,
-  // Object info
-  SfObjectInfo,
-  SfRecordTypeInfo,
-  // Lookup
-  LookupResult,
-  // Error
-  SfError,
+  // Layout
+  LayoutType,
+  LayoutMode,
+
   // Context
   SfContextValue,
   SfProviderConfig,
-  // Form
+  SfProviderProps,
+
+  // Records
+  SfRecord,
+  SfFieldValue,
+  SfError,
   SfFormMode,
+
+  // Object / field metadata
+  SfObjectInfo,
+  SfFieldMetadata,
+  SfFieldInfo,
+  SfFieldDataType,
+  SfPicklistValue,
+  SfRecordTypeInfo,
+  FlsAccess,
+
+  // Record form
   SfRecordFormProps,
   SfRecordFormRef,
-  // Provider
-  SfProviderProps,
+
+  // Data table
+  SfDataTableProps,
+  SfColumnDef,
+  SfColumnType,
+  SfRowAction,
+  BadgeVariant,
+
+  // Lookup
+  LookupResult,
 } from './types';
