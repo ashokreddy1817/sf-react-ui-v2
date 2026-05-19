@@ -1,21 +1,16 @@
 /**
- * SalesforceApiClient — UI API wrapper for React on Salesforce
+ * SalesforceApiClient — UI API wrapper
  *
- * Changelog (v2):
- *  - getRecord:       removed &layoutTypes= — SF rejects fields + layoutTypes together
- *  - getRecordLayout: recordTypeId moved INTO the path (was wrongly a query param)
- *  - getRecordLayout: now accepts layoutType ('Full'|'Compact') and mode param
- *  - getCompactLayout: NEW — /ui-api/compact-layouts/:object/:recordTypeId
- *  - layout walker:   deduplicates fields, always prepends 'Id'
- *  - cache:           keyed on layoutType so Full/Compact are cached separately
+ * Fixes:
+ *  - getRecord: no &layoutTypes= (SF rejects fields + layoutTypes together)
+ *  - getRecordLayout: recordTypeId in URL PATH not query string
+ *  - getCompactLayout: correct endpoint /ui-api/compact-layouts/:object
+ *    NOTE: compact layout endpoint does NOT take recordTypeId in path on all orgs
+ *  - All layout fallbacks return graceful empty array
  */
 
 import type {
-  SfObjectInfo,
-  SfRecord,
-  SfPicklistValue,
-  SfError,
-  LookupResult,
+  SfObjectInfo, SfRecord, SfPicklistValue, SfError, LookupResult,
 } from '../types';
 
 export type LayoutType = 'Full' | 'Compact';
@@ -37,18 +32,15 @@ export class SalesforceApiClient {
     return `${this.orgUrl}/services/data/v${this.apiVersion}`;
   }
 
-  // ─── Internal request helper ──────────────────────────────────────────────────
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     };
-    if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
-    }
+    if (this.accessToken) headers['Authorization'] = `Bearer ${this.accessToken}`;
 
     const res = await fetch(`${this.baseUrl}${path}`, {
-      credentials: 'include', // session cookie inside LWR / Experience Cloud
+      credentials: 'include',
       ...options,
       headers: { ...headers, ...((options.headers as Record<string, string>) ?? {}) },
     });
@@ -64,18 +56,15 @@ export class SalesforceApiClient {
       };
       throw sfErr;
     }
-
     return res.json() as Promise<T>;
   }
 
-  // ─── Object Info ─────────────────────────────────────────────────────────────
+  // ── Object Info ──────────────────────────────────────────────────────────────
   async getObjectInfo(objectName: string): Promise<SfObjectInfo> {
-    const cacheKey = `objectInfo:${objectName}`;
-    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey) as SfObjectInfo;
+    const key = `objectInfo:${objectName}`;
+    if (this.cache.has(key)) return this.cache.get(key) as SfObjectInfo;
 
-    const raw = await this.request<Record<string, unknown>>(
-      `/ui-api/object-info/${objectName}`
-    );
+    const raw = await this.request<Record<string, unknown>>(`/ui-api/object-info/${objectName}`);
 
     const fields = raw.fields as Record<string, Record<string, unknown>>;
     const normalised: SfObjectInfo = {
@@ -85,164 +74,146 @@ export class SalesforceApiClient {
       defaultRecordTypeId: raw.defaultRecordTypeId as string,
       recordTypeInfos: raw.recordTypeInfos as SfObjectInfo['recordTypeInfos'],
       fields: Object.fromEntries(
-        Object.entries(fields).map(([k, f]) => [
-          k,
-          {
-            apiName: f.apiName as string,
-            label: f.label as string,
-            dataType: (
-              f.dataType as string
-            ).toLowerCase() as SfObjectInfo['fields'][string]['dataType'],
-            required: f.required as boolean,
-            updateable: f.updateable as boolean,
-            createable: f.createable as boolean,
-            flsAccess: f.updateable
-              ? 'ReadWrite'
-              : f.filterable
-              ? 'ReadOnly'
-              : 'NoAccess',
-            referenceTo: f.referenceToInfos
-              ? (f.referenceToInfos as Array<{ apiName: string }>).map((r) => r.apiName)
-              : undefined,
-            relationshipName: f.relationshipName as string | undefined,
-          },
-        ])
+        Object.entries(fields).map(([k, f]) => [k, {
+          apiName:          f.apiName as string,
+          label:            f.label as string,
+          dataType:         (f.dataType as string).toLowerCase() as SfObjectInfo['fields'][string]['dataType'],
+          required:         (f.required as boolean) && !(f.nillable as boolean),
+          nillable:         f.nillable as boolean,
+          updateable:       f.updateable as boolean,
+          createable:       f.createable as boolean,
+          flsAccess:        f.updateable ? 'ReadWrite' : f.filterable ? 'ReadOnly' : 'NoAccess',
+          referenceTo:      f.referenceToInfos
+            ? (f.referenceToInfos as Array<{ apiName: string }>).map(r => r.apiName)
+            : undefined,
+          relationshipName: f.relationshipName as string | undefined,
+        }])
       ),
     };
 
-    this.cache.set(cacheKey, normalised);
+    this.cache.set(key, normalised);
     return normalised;
   }
 
-  // ─── Get record ───────────────────────────────────────────────────────────────
-  // FIX: NO &layoutTypes= or &modes= — Salesforce UI API rejects requests that
-  // pass BOTH ?fields= AND &layoutTypes= in the same call.
-  async getRecord(
-    objectName: string,
-    recordId: string,
-    fields: string[]
-  ): Promise<SfRecord> {
-    // UI API requires fields qualified as ObjectName.FieldName
+  // ── Get Record ───────────────────────────────────────────────────────────────
+  // FIX: NO &layoutTypes= — Salesforce rejects ?fields= + &layoutTypes= together
+  async getRecord(objectName: string, recordId: string, fields: string[]): Promise<SfRecord> {
     const fieldList = fields
-      .map((f) => (f.includes('.') ? f : `${objectName}.${f}`))
+      .map(f => f.includes('.') ? f : `${objectName}.${f}`)
       .join(',');
 
     const raw = await this.request<Record<string, unknown>>(
       `/ui-api/records/${recordId}?fields=${fieldList}`
-      // ✅ No &layoutTypes=Full  ✅ No &modes=View
     );
 
-    const rawFields = raw.fields as Record<
-      string,
-      { value: unknown; displayValue: string | null }
-    >;
-
+    const rawFields = raw.fields as Record<string, { value: unknown; displayValue: string | null }>;
     return {
-      id: raw.id as string,
-      apiName: raw.apiName as string,
-      recordTypeId: (raw.recordTypeInfo as { recordTypeId?: string } | null)
-        ?.recordTypeId,
-      lastModifiedById: raw.lastModifiedById as string,
-      lastModifiedDate: raw.lastModifiedDate as string,
-      fields: Object.fromEntries(
-        Object.entries(rawFields).map(([k, v]) => [
-          k,
-          {
-            value: v.value as string | number | boolean | null,
-            displayValue: v.displayValue,
-          },
-        ])
+      id:                 raw.id as string,
+      apiName:            raw.apiName as string,
+      recordTypeId:       (raw.recordTypeInfo as { recordTypeId?: string } | null)?.recordTypeId,
+      lastModifiedById:   raw.lastModifiedById as string,
+      lastModifiedDate:   raw.lastModifiedDate as string,
+      fields:             Object.fromEntries(
+        Object.entries(rawFields).map(([k, v]) => [k, {
+          value:        v.value as string | number | boolean | null,
+          displayValue: v.displayValue,
+        }])
       ),
     };
   }
 
-  // ─── Get Full page layout (fields in admin-defined order) ────────────────────
-  // FIX: recordTypeId MUST be in the URL path — NOT the query string.
-  //
-  //   ❌  /ui-api/layout/Account?layoutType=Full&mode=View&recordTypeId=012xxx
-  //   ✅  /ui-api/layout/Account/012xxx?layoutType=Full&mode=View
-  //
-  // Returns field API names in the exact order the Salesforce admin configured
-  // in Setup → Object Manager → Account → Page Layouts.
+  // ── Full Layout ──────────────────────────────────────────────────────────────
+  // FIX: recordTypeId MUST be in path: /ui-api/layout/:object/:recordTypeId
   async getRecordLayout(
     objectName: string,
     recordTypeId: string,
     layoutType: LayoutType = 'Full',
     mode: LayoutMode = 'View'
   ): Promise<string[]> {
-    const cacheKey = `layout:${objectName}:${recordTypeId}:${layoutType}:${mode}`;
-    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey) as string[];
+    const key = `layout:${objectName}:${recordTypeId}:${layoutType}:${mode}`;
+    if (this.cache.has(key)) return this.cache.get(key) as string[];
 
     try {
-      // recordTypeId is part of the PATH
+      // recordTypeId in PATH — not query string
       const raw = await this.request<Record<string, unknown>>(
         `/ui-api/layout/${objectName}/${recordTypeId}?layoutType=${layoutType}&mode=${mode}`
       );
-
-      const orderedFields = this.extractLayoutFields(raw);
-      this.cache.set(cacheKey, orderedFields);
-      return orderedFields;
-    } catch {
-      // Return empty — SfRecordForm falls back gracefully
-      return [];
-    }
-  }
-
-  // ─── Get Compact layout ───────────────────────────────────────────────────────
-  // NEW: Fetches the compact highlight layout (4-8 fields).
-  // Equivalent to lightning-record-form layout="Compact".
-  //
-  // Endpoint: /ui-api/compact-layouts/:objectName/:recordTypeId
-  async getCompactLayout(
-    objectName: string,
-    recordTypeId: string
-  ): Promise<string[]> {
-    const cacheKey = `compactLayout:${objectName}:${recordTypeId}`;
-    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey) as string[];
-
-    try {
-      const raw = await this.request<Record<string, unknown>>(
-        `/ui-api/compact-layouts/${objectName}/${recordTypeId}`
-      );
-
-      // Response shape: { fieldItems: [{ fieldApiName: 'Name' }, ...] }
-      const fields = (
-        (raw.fieldItems as Array<{ fieldApiName?: string }>) ?? []
-      )
-        .map((item) => item.fieldApiName)
-        .filter((f): f is string => Boolean(f));
-
-      this.cache.set(cacheKey, fields);
+      const fields = this.extractLayoutFields(raw);
+      this.cache.set(key, fields);
       return fields;
     } catch {
       return [];
     }
   }
 
-  // ─── Walk layout sections → extract ordered field API names ──────────────────
-  private extractLayoutFields(raw: Record<string, unknown>): string[] {
-    type LayoutComponent = { componentType: string; apiName?: string };
-    type LayoutItem = { layoutComponents?: LayoutComponent[] };
-    type LayoutRow = { layoutItems?: LayoutItem[] };
-    type LayoutSection = { layoutRows?: LayoutRow[] };
+  // ── Compact Layout ───────────────────────────────────────────────────────────
+  // FIX: correct endpoint is /ui-api/compact-layouts/:objectName
+  // The per-recordType variant /:objectName/:recordTypeId may 404 on scratch orgs
+  // so we try that first then fall back to the object-level endpoint
+  async getCompactLayout(objectName: string, recordTypeId: string): Promise<string[]> {
+    const key = `compact:${objectName}:${recordTypeId}`;
+    if (this.cache.has(key)) return this.cache.get(key) as string[];
 
-    const sections = (raw.sections as LayoutSection[]) ?? [];
-    const seen = new Set<string>();
+    // Try 1: per record-type compact layout
+    try {
+      const raw = await this.request<Record<string, unknown>>(
+        `/ui-api/compact-layouts/${objectName}/${recordTypeId}`
+      );
+      const fields = this.extractCompactFields(raw);
+      if (fields.length > 0) {
+        this.cache.set(key, fields);
+        return fields;
+      }
+    } catch { /* fall through */ }
+
+    // Try 2: object-level compact layouts (returns all record types)
+    try {
+      const raw = await this.request<Record<string, unknown>>(
+        `/ui-api/compact-layouts/${objectName}`
+      );
+      // Response: { recordTypeId: { fieldItems: [...] } } map
+      // Find matching record type or use default
+      const layouts = raw as Record<string, { fieldItems?: Array<{ fieldApiName?: string }> }>;
+      const layout = layouts[recordTypeId] ?? Object.values(layouts)[0];
+      if (layout) {
+        const fields = this.extractCompactFields(layout);
+        if (fields.length > 0) {
+          this.cache.set(key, fields);
+          return fields;
+        }
+      }
+    } catch { /* fall through */ }
+
+    return [];
+  }
+
+  private extractCompactFields(raw: Record<string, unknown>): string[] {
+    const items = (raw.fieldItems as Array<{ fieldApiName?: string; layoutComponents?: Array<{ apiName?: string }> }>) ?? [];
     const fields: string[] = [];
+    for (const item of items) {
+      // Some orgs return fieldApiName directly, others nest in layoutComponents
+      const name = item.fieldApiName
+        ?? item.layoutComponents?.[0]?.apiName;
+      if (name && !fields.includes(name)) fields.push(name);
+    }
+    return fields;
+  }
 
-    // Always include Id first
-    seen.add('Id');
-    fields.push('Id');
+  private extractLayoutFields(raw: Record<string, unknown>): string[] {
+    type Comp    = { componentType: string; apiName?: string };
+    type Item    = { layoutComponents?: Comp[] };
+    type Row     = { layoutItems?: Item[] };
+    type Section = { layoutRows?: Row[] };
+
+    const sections = (raw.sections as Section[]) ?? [];
+    const seen     = new Set<string>(['Id']);
+    const fields   = ['Id'];
 
     for (const section of sections) {
       for (const row of section.layoutRows ?? []) {
         for (const item of row.layoutItems ?? []) {
           for (const comp of item.layoutComponents ?? []) {
-            if (
-              comp.componentType === 'Field' &&
-              comp.apiName &&
-              !seen.has(comp.apiName)
-            ) {
+            if (comp.componentType === 'Field' && comp.apiName && !seen.has(comp.apiName)) {
               seen.add(comp.apiName);
               fields.push(comp.apiName);
             }
@@ -250,15 +221,11 @@ export class SalesforceApiClient {
         }
       }
     }
-
     return fields;
   }
 
-  // ─── Create record ────────────────────────────────────────────────────────────
-  async createRecord(
-    objectName: string,
-    data: Record<string, unknown>
-  ): Promise<SfRecord> {
+  // ── Create Record ────────────────────────────────────────────────────────────
+  async createRecord(objectName: string, data: Record<string, unknown>): Promise<SfRecord> {
     const res = await this.request<{ id: string }>('/ui-api/records', {
       method: 'POST',
       body: JSON.stringify({ apiName: objectName, fields: data }),
@@ -266,12 +233,8 @@ export class SalesforceApiClient {
     return this.getRecord(objectName, res.id, Object.keys(data));
   }
 
-  // ─── Update record ────────────────────────────────────────────────────────────
-  async updateRecord(
-    objectName: string,
-    recordId: string,
-    data: Record<string, unknown>
-  ): Promise<SfRecord> {
+  // ── Update Record ────────────────────────────────────────────────────────────
+  async updateRecord(objectName: string, recordId: string, data: Record<string, unknown>): Promise<SfRecord> {
     await this.request<void>(`/ui-api/records/${recordId}`, {
       method: 'PATCH',
       body: JSON.stringify({ apiName: objectName, fields: data }),
@@ -279,50 +242,61 @@ export class SalesforceApiClient {
     return this.getRecord(objectName, recordId, Object.keys(data));
   }
 
-  // ─── Picklist values ──────────────────────────────────────────────────────────
-  async getPicklistValues(
-    objectName: string,
-    recordTypeId: string,
-    fieldName: string
-  ): Promise<SfPicklistValue[]> {
-    const cacheKey = `picklist:${objectName}:${recordTypeId}:${fieldName}`;
-    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey) as SfPicklistValue[];
+  // ── Picklist Values ──────────────────────────────────────────────────────────
+  async getPicklistValues(objectName: string, recordTypeId: string, fieldName: string): Promise<SfPicklistValue[]> {
+    const key = `picklist:${objectName}:${recordTypeId}:${fieldName}`;
+    if (this.cache.has(key)) return this.cache.get(key) as SfPicklistValue[];
 
     const raw = await this.request<{
       values: Array<{ label: string; value: string; validFor?: string[] }>;
-    }>(
-      `/ui-api/object-info/${objectName}/picklist-values/${recordTypeId}/${fieldName}`
-    );
+    }>(`/ui-api/object-info/${objectName}/picklist-values/${recordTypeId}/${fieldName}`);
 
-    // UI API only returns active values — we set active: true for all
-    const normalised: SfPicklistValue[] = (raw.values ?? []).map((v) => ({
-      label: v.label,
-      value: v.value,
-      active: true,
-      validFor: v.validFor,
+    const result: SfPicklistValue[] = (raw.values ?? []).map(v => ({
+      label: v.label, value: v.value, active: true, validFor: v.validFor,
     }));
-
-    this.cache.set(cacheKey, normalised);
-    return normalised;
+    this.cache.set(key, result);
+    return result;
   }
 
-  // ─── Lookup search (SOSL) ─────────────────────────────────────────────────────
-  async searchRecords(
+  // ── Related Records ──────────────────────────────────────────────────────────
+  async getRelatedRecords(
     objectName: string,
-    query: string,
+    recordId: string,
+    relatedObjectName: string,
+    relationshipField: string,
+    fields: string[],
     limit = 10
-  ): Promise<LookupResult[]> {
+  ): Promise<SfRecord[]> {
+    // Use SOQL via query endpoint
+    const fieldList = ['Id', ...fields.filter(f => f !== 'Id')].join(', ');
+    const soql = encodeURIComponent(
+      `SELECT ${fieldList} FROM ${relatedObjectName} WHERE ${relationshipField} = '${recordId}' LIMIT ${limit}`
+    );
+    const raw = await this.request<{ records: Array<Record<string, unknown>> }>(
+      `/query/?q=${soql}`
+    );
+    return (raw.records ?? []).map(r => ({
+      id:       r.Id as string,
+      apiName:  relatedObjectName,
+      fields:   Object.fromEntries(
+        Object.entries(r)
+          .filter(([k]) => k !== 'attributes')
+          .map(([k, v]) => [k, { value: v as string | number | boolean | null, displayValue: null }])
+      ),
+    }));
+  }
+
+  // ── SOSL Lookup Search ───────────────────────────────────────────────────────
+  async searchRecords(objectName: string, query: string, limit = 10): Promise<LookupResult[]> {
     if (!query || query.length < 2) return [];
     const sosl = encodeURIComponent(
       `FIND {${query}*} IN NAME FIELDS RETURNING ${objectName}(Id, Name LIMIT ${limit})`
     );
-    const raw = await this.request<{
-      searchRecords: Array<{ Id: string; Name: string }>;
-    }>(`/search/?q=${sosl}`);
-    return (raw.searchRecords ?? []).map((r) => ({ id: r.Id, name: r.Name }));
+    const raw = await this.request<{ searchRecords: Array<{ Id: string; Name: string }> }>(
+      `/search/?q=${sosl}`
+    );
+    return (raw.searchRecords ?? []).map(r => ({ id: r.Id, name: r.Name }));
   }
 
-  clearCache() {
-    this.cache.clear();
-  }
+  clearCache() { this.cache.clear(); }
 }

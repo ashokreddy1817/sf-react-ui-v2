@@ -481,3 +481,42 @@
   font-size: 13px;
   color: #706e6b;
 }
+/* ── Layout badge ────────────────────────────────────────────────────────────── */
+.sf-record-form__layout-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 99px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sf-record-form__layout-badge--full    { background: #e8f0fe; color: #0176d3; }
+.sf-record-form__layout-badge--compact { background: #fdf0d5; color: #c57900; }
+
+/* ── Global error banner ─────────────────────────────────────────────────────── */
+.sf-record-form__global-error {
+  margin: 12px 16px 0;
+  padding: 10px 14px;
+  background: #fff0ee;
+  border: 1px solid #f7b5b0;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #c23934;
+}
+
+/* ── Compact variant ─────────────────────────────────────────────────────────── */
+.sf-record-form--compact .sf-record-form__field {
+  padding: 8px 14px;
+}
+.sf-record-form--compact .sf-record-form__field-label {
+  font-size: 10px;
+}
+.sf-record-form--compact .sf-record-form__field-value,
+.sf-record-form--compact .sf-record-form__input {
+  font-size: 13px;
+}
+.sf-record-form--compact .sf-record-form__header {
+  padding: 8px 14px;
+}

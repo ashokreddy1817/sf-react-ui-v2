@@ -1,25 +1,20 @@
-// src/types/index.ts  — single source of truth for all library types
-
+// src/types/index.ts — single source of truth for all library types
 import type { ReactNode } from 'react';
 
-// ─── Field-level security ─────────────────────────────────────────────────────
-
-export type FlsAccess = 'ReadWrite' | 'ReadOnly' | 'NoAccess';
-
-// ─── Layout types ─────────────────────────────────────────────────────────────
-
+// ─── Layout ───────────────────────────────────────────────────────────────────
 export type LayoutType = 'Full' | 'Compact';
 export type LayoutMode = 'View' | 'Edit' | 'Create';
 
-// ─── Field value (as returned by UI API records endpoint) ────────────────────
+// ─── FLS ─────────────────────────────────────────────────────────────────────
+export type FlsAccess = 'ReadWrite' | 'ReadOnly' | 'NoAccess';
 
+// ─── Field value ──────────────────────────────────────────────────────────────
 export interface SfFieldValue {
   value: string | number | boolean | null;
   displayValue: string | null;
 }
 
 // ─── Record ───────────────────────────────────────────────────────────────────
-
 export interface SfRecord {
   id: string;
   apiName: string;
@@ -30,7 +25,6 @@ export interface SfRecord {
 }
 
 // ─── Error ────────────────────────────────────────────────────────────────────
-
 export interface SfError {
   message: string;
   statusCode?: number;
@@ -39,7 +33,6 @@ export interface SfError {
 }
 
 // ─── Field metadata ───────────────────────────────────────────────────────────
-
 export type SfFieldDataType =
   | 'string' | 'textarea' | 'boolean'
   | 'int' | 'double' | 'number' | 'currency' | 'percent'
@@ -54,6 +47,7 @@ export interface SfFieldMetadata {
   required: boolean;
   updateable: boolean;
   createable: boolean;
+  nillable?: boolean;
   flsAccess: FlsAccess;
   referenceTo?: string[];
   relationshipName?: string;
@@ -64,7 +58,6 @@ export interface SfFieldMetadata {
 export type SfFieldInfo = SfFieldMetadata;
 
 // ─── Picklist ─────────────────────────────────────────────────────────────────
-
 export interface SfPicklistValue {
   label: string;
   value: string;
@@ -73,7 +66,6 @@ export interface SfPicklistValue {
 }
 
 // ─── Record type ──────────────────────────────────────────────────────────────
-
 export interface SfRecordTypeInfo {
   recordTypeId: string;
   name: string;
@@ -82,7 +74,6 @@ export interface SfRecordTypeInfo {
 }
 
 // ─── Object info ──────────────────────────────────────────────────────────────
-
 export interface SfObjectInfo {
   apiName: string;
   label: string;
@@ -93,8 +84,7 @@ export interface SfObjectInfo {
   fields: Record<string, SfFieldMetadata>;
 }
 
-// ─── Lookup result ────────────────────────────────────────────────────────────
-
+// ─── Lookup ───────────────────────────────────────────────────────────────────
 export interface LookupResult {
   id: string;
   name: string;
@@ -102,7 +92,6 @@ export interface LookupResult {
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
-
 export interface SfProviderConfig {
   orgUrl: string;
   apiVersion?: string;
@@ -112,93 +101,26 @@ export interface SfProviderConfig {
 
 export interface SfContextValue {
   config: SfProviderConfig;
-
   getObjectInfo: (objectName: string) => Promise<SfObjectInfo>;
-
-  getRecord: (
-    objectName: string,
-    recordId: string,
-    fields: string[]
-  ) => Promise<SfRecord>;
-
-  /**
-   * Fetches Full page layout field list in admin-defined order.
-   * recordTypeId is placed in the URL path (not query string).
-   * layoutType defaults to 'Full'; pass 'Compact' only when you need
-   * the compact variant via this endpoint (prefer getCompactLayout instead).
-   *
-   * URL: /ui-api/layout/:objectName/:recordTypeId?layoutType=Full&mode=View
-   */
-  getRecordLayout: (
-    objectName: string,
-    recordTypeId: string,
-    layoutType?: LayoutType,
-    mode?: LayoutMode
-  ) => Promise<string[]>;
-
-  /**
-   * Fetches Compact layout field list (4-8 highlight fields).
-   * Used when layoutType="Compact" on SfRecordForm.
-   * Mirrors lightning-record-form layout="Compact".
-   *
-   * URL: /ui-api/compact-layouts/:objectName/:recordTypeId
-   */
-  getCompactLayout: (
-    objectName: string,
-    recordTypeId: string
-  ) => Promise<string[]>;
-
-  createRecord: (
-    objectName: string,
-    data: Record<string, unknown>
-  ) => Promise<SfRecord>;
-
-  updateRecord: (
-    objectName: string,
-    recordId: string,
-    data: Record<string, unknown>
-  ) => Promise<SfRecord>;
-
-  getPicklistValues: (
-    objectName: string,
-    recordTypeId: string,
-    fieldName: string
-  ) => Promise<SfPicklistValue[]>;
-
-  searchRecords: (
-    objectName: string,
-    query: string,
-    limit?: number
-  ) => Promise<LookupResult[]>;
+  getRecord: (objectName: string, recordId: string, fields: string[]) => Promise<SfRecord>;
+  getRecordLayout: (objectName: string, recordTypeId: string, layoutType?: LayoutType, mode?: LayoutMode) => Promise<string[]>;
+  getCompactLayout: (objectName: string, recordTypeId: string) => Promise<string[]>;
+  createRecord: (objectName: string, data: Record<string, unknown>) => Promise<SfRecord>;
+  updateRecord: (objectName: string, recordId: string, data: Record<string, unknown>) => Promise<SfRecord>;
+  getPicklistValues: (objectName: string, recordTypeId: string, fieldName: string) => Promise<SfPicklistValue[]>;
+  searchRecords: (objectName: string, query: string, limit?: number) => Promise<LookupResult[]>;
 }
 
 // ─── SfRecordForm ─────────────────────────────────────────────────────────────
-
 export type SfFormMode = 'view' | 'edit' | 'create';
 
 export interface SfRecordFormProps {
   objectName: string;
   recordId?: string;
   mode?: SfFormMode;
-
-  /**
-   * Which Salesforce page layout to load.
-   * 'Full'    → standard full page layout, 2-column grid (default)
-   * 'Compact' → compact highlight panel layout, 1-column, 4-8 fields
-   *
-   * Directly mirrors lightning-record-form layout="Full" | layout="Compact"
-   */
   layoutType?: LayoutType;
-
-  /**
-   * Explicit list of field API names to display.
-   * When provided, skips layout API fetch entirely.
-   */
   fields?: string[];
-
-  /** Number of grid columns. Ignored when layoutType="Compact" (always 1). */
   columns?: 1 | 2;
-
   lockMode?: boolean;
   hideFooter?: boolean;
   hideHeader?: boolean;
@@ -216,7 +138,7 @@ export interface SfRecordFormProps {
 }
 
 export interface SfRecordFormRef {
-  save: () => void;
+  save: () => Promise<void>;
   reset: () => void;
   isDirty: () => boolean;
   getValues: () => Record<string, unknown>;
@@ -225,11 +147,143 @@ export interface SfRecordFormRef {
 }
 
 // ─── SfProvider ───────────────────────────────────────────────────────────────
-
 export interface SfProviderProps {
   orgUrl: string;
   accessToken?: string;
   apiVersion?: string;
   onAuthError?: () => void;
   children: ReactNode;
+}
+
+// ─── SfDataTable ──────────────────────────────────────────────────────────────
+export interface SfColumnDef {
+  label: string;
+  fieldName: string;
+  type?: 'text' | 'number' | 'currency' | 'date' | 'datetime' | 'boolean' | 'url' | 'email' | 'phone';
+  sortable?: boolean;
+  width?: string | number;
+  primary?: boolean;
+  badge?: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> | ((v: unknown) => 'success' | 'warning' | 'error' | 'info' | 'default');
+}
+
+export interface SfDataTableProps {
+  objectApiName?: string;
+  title?: string;
+  columns: SfColumnDef[];
+  records: Record<string, unknown>[];
+  keyField?: string;
+  sortable?: boolean;
+  filterable?: boolean;
+  striped?: boolean;
+  loading?: boolean;
+  actions?: Array<{ label: string; name: string; variant?: 'default' | 'destructive' }>;
+  onRowAction?: (action: string, row: Record<string, unknown>) => void;
+  selectedRows?: string[];
+  onSelectionChange?: (ids: string[]) => void;
+  emptyMessage?: string;
+}
+
+// ─── SfLookupField ────────────────────────────────────────────────────────────
+export interface SfLookupFieldProps {
+  objectName: string;
+  value?: string;
+  displayValue?: string;
+  label?: string;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  onChange?: (id: string, name: string) => void;
+  onClear?: () => void;
+  className?: string;
+}
+
+// ─── SfPicklistSelect ─────────────────────────────────────────────────────────
+export interface SfPicklistSelectProps {
+  objectName: string;
+  fieldName: string;
+  recordTypeId?: string;
+  value?: string;
+  label?: string;
+  required?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  onChange?: (value: string) => void;
+  className?: string;
+}
+
+// ─── SfRelatedList ────────────────────────────────────────────────────────────
+export interface SfRelatedListProps {
+  objectName: string;
+  recordId: string;
+  relatedObjectName: string;
+  relationshipField: string;
+  columns: SfColumnDef[];
+  title?: string;
+  limit?: number;
+  onRowAction?: (action: string, row: Record<string, unknown>) => void;
+  actions?: Array<{ label: string; name: string; variant?: 'default' | 'destructive' }>;
+}
+
+// ─── SfStatusBadge ────────────────────────────────────────────────────────────
+export type StatusVariant = 'success' | 'warning' | 'error' | 'info' | 'default' | 'dark';
+
+export interface SfStatusBadgeProps {
+  label: string;
+  variant?: StatusVariant;
+  dot?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
+// ─── SfRecordCard ─────────────────────────────────────────────────────────────
+export interface SfRecordCardProps {
+  objectName: string;
+  recordId: string;
+  fields?: string[];
+  title?: string;
+  subtitle?: string;
+  onClick?: (recordId: string) => void;
+  actions?: Array<{ label: string; name: string }>;
+  onAction?: (name: string, recordId: string) => void;
+  className?: string;
+}
+
+// ─── SfTimeline ───────────────────────────────────────────────────────────────
+export interface SfTimelineItem {
+  id: string;
+  title: string;
+  description?: string;
+  timestamp: string;
+  type?: 'call' | 'email' | 'task' | 'event' | 'note' | 'custom';
+  icon?: string;
+  user?: string;
+  metadata?: Record<string, string>;
+}
+
+export interface SfTimelineProps {
+  items: SfTimelineItem[];
+  loading?: boolean;
+  title?: string;
+  emptyMessage?: string;
+  className?: string;
+}
+
+// ─── SfChart ──────────────────────────────────────────────────────────────────
+export type ChartType = 'bar' | 'line' | 'donut' | 'funnel';
+
+export interface SfChartDataPoint {
+  label: string;
+  value: number;
+  color?: string;
+}
+
+export interface SfChartProps {
+  type: ChartType;
+  data: SfChartDataPoint[];
+  title?: string;
+  subtitle?: string;
+  height?: number;
+  showLegend?: boolean;
+  showValues?: boolean;
+  className?: string;
 }
