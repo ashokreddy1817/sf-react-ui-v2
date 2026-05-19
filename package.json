@@ -1,15 +1,13 @@
 {
   "name": "@ashokreddy1828/sf-react-ui",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "React equivalent of lightning-base-components for Salesforce — SfRecordForm, SfProvider and more",
   "author": "Ashok Reddy",
   "license": "MIT",
   "type": "module",
-
   "main": "dist/index.cjs",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
-
   "exports": {
     ".": {
       "import": "./dist/index.esm.js",
@@ -18,17 +16,14 @@
     },
     "./dist/index.css": "./dist/index.css"
   },
-
   "files": [
     "dist",
     "README.md"
   ],
-
   "sideEffects": [
     "**/*.css",
     "dist/index.css"
   ],
-
   "keywords": [
     "salesforce",
     "react",
@@ -39,23 +34,19 @@
     "lwc",
     "react-on-salesforce"
   ],
-
   "engines": {
     "node": ">=16.0.0"
   },
-
   "scripts": {
     "build": "rollup -c",
     "build:watch": "rollup -c --watch",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "npm run type-check && npm run build"
   },
-
   "peerDependencies": {
     "react": ">=17.0.0",
     "react-dom": ">=17.0.0"
   },
-
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^15.0.0",
@@ -70,5 +61,4 @@
     "tslib": "^2.8.1",
     "typescript": "^5.0.0"
   }
-
 }
