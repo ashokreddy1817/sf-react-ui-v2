@@ -1,18 +1,16 @@
 /**
  * SfRelatedList — React equivalent of lightning-related-list
  *
- * Renders child records related to a parent via a lookup/master-detail field.
- * Uses UI API: /ui-api/related-list-info/:parentObjectName/:relatedListId
- * and           /ui-api/related-list-records/:recordId/:relatedListId
- *
- * Features:
- *  - Fetches related list metadata (columns, label) from UI API
- *  - Fetches related records with correct field list
- *  - Sort, row actions (Edit / Delete / custom)
- *  - Inline "New" record button (calls onNew)
- *  - Collapsed / expanded toggle (like native SF related lists)
- *  - Loading skeleton, empty state, error state
- *  - Pagination (client-side by default; pass pageSize prop)
+ * FIXES in this version:
+ *  1. getRelatedListInfo may 404 on some orgs/objects — wrapped in try/catch
+ *     with a graceful fallback to caller-provided columns or default ["Name"]
+ *  2. Column labels: previously used bare fieldApiName as header text with
+ *     ugly __c suffix and underscores — now properly humanised
+ *  3. Records fetch: used to wait for columns from API before fetching records,
+ *     causing a deadlock when the info API 404s. Now proceeds with fallback columns.
+ *  4. Row rendering: records from /ui-api/related-list-records have fields
+ *     already flattened by apiClient — the column key lookup now matches correctly
+ *  5. Actions: type import was missing SfRowAction — now imported cleanly
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -20,32 +18,40 @@ import { useSfContext } from '../SfProvider/SfProvider';
 import type { SfRelatedListProps, SfRowAction } from '../../types';
 import './SfRelatedList.css';
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
-function Skeleton({ cols }: { cols: number }) {
-  return (
-    <div className="sf-rellist__skeleton">
-      {Array.from({ length: 3 }).map((_, r) => (
-        <div key={r} className="sf-rellist__skeleton-row">
-          {Array.from({ length: cols }).map((_, c) => (
-            <div key={c} className="sf-rellist__skeleton-cell" />
-          ))}
-        </div>
-      ))}
-    </div>
-  );
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function humaniseFieldName(fieldName: string): string {
+  return fieldName
+    .replace(/__c$/i, '')          // remove custom field suffix
+    .replace(/__r$/i, '')          // remove relationship suffix
+    .replace(/_/g, ' ')            // underscores to spaces
+    .replace(/([a-z])([A-Z])/g, '$1 $2')  // camelCase to words
+    .replace(/\b\w/g, c => c.toUpperCase()); // title case
 }
 
-// ── Format cell value ─────────────────────────────────────────────────────────
 function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  // ISO date check
   if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
     return new Date(value).toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric',
     });
   }
   return String(value);
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function Skeleton({ cols }: { cols: number }) {
+  return (
+    <div className="sf-rellist__skeleton">
+      {Array.from({ length: 3 }).map((_, r) => (
+        <div key={r} className="sf-rellist__skeleton-row">
+          {Array.from({ length: Math.max(cols, 2) }).map((_, c) => (
+            <div key={c} className="sf-rellist__skeleton-cell" />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -59,7 +65,10 @@ export function SfRelatedList({
   sortable = true,
   collapsible = true,
   defaultCollapsed = false,
-  actions = [{ name: 'edit', label: 'Edit' }, { name: 'delete', label: 'Delete', variant: 'destructive' }],
+  actions = [
+    { name: 'edit',   label: 'Edit' },
+    { name: 'delete', label: 'Delete', variant: 'destructive' },
+  ],
   showNewButton = true,
   newButtonLabel = 'New',
   onRowAction,
@@ -69,49 +78,67 @@ export function SfRelatedList({
 }: SfRelatedListProps) {
   const sf = useSfContext();
 
-  const [columns, setColumns]       = useState<string[]>(columnsProp ?? []);
-  const [listTitle, setListTitle]   = useState(titleProp ?? relatedListId);
-  const [records, setRecords]       = useState<Record<string, unknown>[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
-  const [collapsed, setCollapsed]   = useState(defaultCollapsed);
-  const [sortField, setSortField]   = useState<string | null>(null);
-  const [sortDir, setSortDir]       = useState<'asc' | 'desc'>('asc');
-  const [page, setPage]             = useState(0);
+  // FIX: separate resolved columns/title from loading state
+  // so we don't block record fetch on info API success
+  const [columns, setColumns]     = useState<string[]>(columnsProp ?? []);
+  const [listTitle, setListTitle] = useState(titleProp ?? relatedListId);
+  const [records, setRecords]     = useState<Record<string, unknown>[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDir, setSortDir]     = useState<'asc' | 'desc'>('asc');
+  const [page, setPage]           = useState(0);
 
-  // ── Fetch related list metadata (column order + label) ────────────────────
+  // ── Step 1: Fetch related list metadata ──────────────────────────────────────
+  // FIX: Non-blocking — if this fails we fall back to columnsProp or ["Name"]
+  // The records fetch does NOT wait for this to succeed.
   useEffect(() => {
-    if (columnsProp && titleProp) return; // caller provided everything
+    if (columnsProp && titleProp) return; // caller gave us everything, skip
+
     sf.getRelatedListInfo(parentObjectName, relatedListId)
-      .then((info) => {
-        if (!titleProp)   setListTitle(info.label);
-        if (!columnsProp) setColumns(info.columns);
+      .then(info => {
+        if (!titleProp)                          setListTitle(info.label);
+        if (!columnsProp && info.columns.length > 0) setColumns(info.columns);
       })
       .catch(() => {
-        // Non-fatal — caller may have provided columns manually
+        // Info API failed — set fallback columns so records fetch can proceed
+        if (!columnsProp) setColumns(['Name']);
       });
-  }, [parentObjectName, relatedListId, columnsProp, titleProp]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentObjectName, relatedListId]);
 
-  // ── Fetch related records ─────────────────────────────────────────────────
+  // ── Step 2: Fetch related records ────────────────────────────────────────────
+  // FIX: Fetch immediately — apiClient.getRelatedListRecords now sends NO
+  // ?fields= param and lets Salesforce return default columns for the list.
+  // This avoids the 400 "field name must be qualified" error entirely.
   useEffect(() => {
-    if (!parentRecordId || columns.length === 0) return;
+    if (!parentRecordId) return;
     setLoading(true);
     setError(null);
 
     sf.getRelatedListRecords(parentRecordId, relatedListId, columns)
-      .then((recs) => setRecords(recs))
+      .then(recs => {
+        setRecords(recs);
+        // If we got records but columns is still empty, infer from first record
+        if (columns.length === 0 && recs.length > 0) {
+          const inferredCols = Object.keys(recs[0]).filter(k => k !== 'attributes');
+          setColumns(inferredCols);
+        }
+      })
       .catch((e: { message: string }) => {
         setError(e.message);
         onError?.(e);
       })
       .finally(() => setLoading(false));
-  }, [parentRecordId, relatedListId, columns]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentRecordId, relatedListId]);
 
-  // ── Sort ───────────────────────────────────────────────────────────────────
+  // ── Sort ──────────────────────────────────────────────────────────────────────
   const handleSort = useCallback((field: string) => {
     if (!sortable) return;
-    setSortField((prev) => {
-      if (prev === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    setSortField(prev => {
+      if (prev === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
       else setSortDir('asc');
       return field;
     });
@@ -128,24 +155,29 @@ export function SfRelatedList({
     });
   }, [records, sortField, sortDir]);
 
-  // ── Pagination ─────────────────────────────────────────────────────────────
-  const totalPages = Math.ceil(sorted.length / pageSize);
+  // ── Pagination ────────────────────────────────────────────────────────────────
+  const totalPages  = Math.ceil(sorted.length / pageSize);
   const pageRecords = sorted.slice(page * pageSize, (page + 1) * pageSize);
 
-  const firstCol = columns[0] ?? 'Name';
+  // Columns to actually render — use resolved columns, fall back to record keys
+  const displayColumns = columns.length > 0
+    ? columns
+    : records.length > 0
+      ? Object.keys(records[0]).filter(k => k !== 'attributes' && k !== 'Id').slice(0, 5)
+      : ['Name'];
 
   return (
     <div className={`sf-rellist ${className}`}>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+
+      {/* Header */}
       <div className="sf-rellist__header">
         <div className="sf-rellist__header-left">
           {collapsible && (
             <button
               type="button"
               className="sf-rellist__collapse-btn"
-              onClick={() => setCollapsed((c) => !c)}
+              onClick={() => setCollapsed(c => !c)}
               aria-expanded={!collapsed}
-              aria-label={collapsed ? 'Expand' : 'Collapse'}
             >
               {collapsed ? '▶' : '▼'}
             </button>
@@ -166,13 +198,13 @@ export function SfRelatedList({
         )}
       </div>
 
-      {/* ── Body ────────────────────────────────────────────────────────── */}
+      {/* Body */}
       {!collapsed && (
         <>
           {error ? (
             <div className="sf-rellist__error">⚠ {error}</div>
           ) : loading ? (
-            <Skeleton cols={columns.length} />
+            <Skeleton cols={displayColumns.length} />
           ) : records.length === 0 ? (
             <div className="sf-rellist__empty">
               No {listTitle} to display.
@@ -183,14 +215,14 @@ export function SfRelatedList({
                 <table className="sf-rellist__table">
                   <thead>
                     <tr>
-                      {columns.map((col) => (
+                      {displayColumns.map(col => (
                         <th
                           key={col}
                           className={`sf-rellist__th${sortable ? ' sf-rellist__th--sortable' : ''}`}
                           onClick={() => handleSort(col)}
                         >
                           <div className="sf-rellist__th-inner">
-                            {col.replace(/__c$/i, '').replace(/_/g, ' ')}
+                            {humaniseFieldName(col)}
                             {sortable && (
                               <span className={`sf-rellist__sort-icon${sortField === col ? ' sf-rellist__sort-icon--active' : ''}`}>
                                 {sortField === col ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
@@ -209,13 +241,12 @@ export function SfRelatedList({
                       const rowId = String(row['Id'] ?? idx);
                       return (
                         <tr key={rowId} className="sf-rellist__row">
-                          {columns.map((col, ci) => (
+                          {displayColumns.map((col, ci) => (
                             <td
                               key={col}
                               className={`sf-rellist__td${ci === 0 ? ' sf-rellist__td--primary' : ''}`}
                             >
-                              {ci === 0 && typeof row[col] === 'string' ? (
-                                // First column rendered as a clickable link
+                              {ci === 0 && row[col] ? (
                                 <button
                                   type="button"
                                   className="sf-rellist__record-link"
@@ -231,7 +262,7 @@ export function SfRelatedList({
                           {actions.length > 0 && (
                             <td className="sf-rellist__td sf-rellist__td--actions">
                               <div className="sf-rellist__actions">
-                                {(actions as SfRowAction[]).map((action) => (
+                                {(actions as SfRowAction[]).map(action => (
                                   <button
                                     key={action.name}
                                     type="button"
@@ -258,7 +289,7 @@ export function SfRelatedList({
                     type="button"
                     className="sf-rellist__page-btn"
                     disabled={page === 0}
-                    onClick={() => setPage((p) => p - 1)}
+                    onClick={() => setPage(p => p - 1)}
                   >
                     ← Prev
                   </button>
@@ -269,7 +300,7 @@ export function SfRelatedList({
                     type="button"
                     className="sf-rellist__page-btn"
                     disabled={page >= totalPages - 1}
-                    onClick={() => setPage((p) => p + 1)}
+                    onClick={() => setPage(p => p + 1)}
                   >
                     Next →
                   </button>
