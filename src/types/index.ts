@@ -262,3 +262,75 @@ export interface SfRelatedListProps {
   onError?: (error: { message: string }) => void;
   className?: string;
 }
+// ─── SfStatusBadge ────────────────────────────────────────────────────────────
+export type SfBadgeColor =
+  | 'green' | 'red' | 'orange' | 'blue' | 'indigo' | 'purple'
+  | 'teal'  | 'gray' | 'dark'
+  | 'success' | 'warning' | 'error' | 'info';
+
+export interface SfStatusBadgeProps {
+  value: string | null | undefined;
+  colorMap?: Record<string, SfBadgeColor | string>;
+  label?: string;
+  showDot?: boolean;
+  size?: 'small' | 'medium' | 'large';
+  className?: string;
+}
+
+// ─── SfRecordCard ─────────────────────────────────────────────────────────────
+export type SfRecordCardLayout = 'compact' | 'full';
+
+export interface SfRecordCardProps {
+  objectName: string;
+  recordId: string;
+  fields?: string[];
+  layout?: SfRecordCardLayout;
+  title?: string;
+  showEditButton?: boolean;
+  showRefreshButton?: boolean;
+  onEdit?: (record: SfRecord) => void;
+  onError?: (error: { message: string }) => void;
+  className?: string;
+}
+
+// ─── SfChart ──────────────────────────────────────────────────────────────────
+export type SfChartType      = 'bar' | 'pie' | 'donut' | 'line';
+export type SfAggregateType  = 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX';
+
+export interface SfChartProps {
+  type?: SfChartType;
+  objectName: string;
+  groupBy: string;
+  aggregate: SfAggregateType;
+  aggregateField?: string;
+  filter?: string;
+  maxGroups?: number;
+  title?: string;
+  height?: number;
+  onError?: (error: { message: string }) => void;
+  className?: string;
+}
+
+// ─── SfTimeline ───────────────────────────────────────────────────────────────
+export type SfActivityType = 'tasks' | 'events' | 'emails' | 'all';
+
+export interface SfTimelineItem {
+  id: string;
+  type: 'task' | 'event' | 'email';
+  subject: string;
+  date?: string;
+  assignedTo?: string;
+  description?: string;
+  isCompleted?: boolean;
+}
+
+export interface SfTimelineProps {
+  recordId: string;
+  activityTypes?: SfActivityType;
+  maxItems?: number;
+  sortOrder?: 'asc' | 'desc';
+  showFilters?: boolean;
+  onItemClick?: (item: SfTimelineItem) => void;
+  onError?: (error: { message: string }) => void;
+  className?: string;
+}

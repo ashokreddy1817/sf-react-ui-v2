@@ -1,0 +1,170 @@
+/* SfRecordCard.css */
+
+.sf-card {
+  font-family: 'Salesforce Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #fff;
+  border: 1px solid #dddbda;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── Error ─────────────────────────────────────────────────────────────────── */
+.sf-card--error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  background: #fdf3f2;
+  border-color: #fbd0ce;
+  color: #c23934;
+  font-size: 13px;
+}
+.sf-card__error-icon { font-size: 16px; }
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.sf-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f3f3;
+}
+
+.sf-card__icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0176d3 0%, #014486 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.sf-card__header-info { flex: 1; min-width: 0; }
+.sf-card__title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sf-card__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0176d3;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sf-card__object-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #706e6b;
+  background: #f3f3f3;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* ── Actions ───────────────────────────────────────────────────────────────── */
+.sf-card__actions { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.sf-card__action-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border: 1px solid #dddbda;
+  border-radius: 4px;
+  background: #fff;
+  color: #3e3e3c;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.sf-card__action-btn:hover { background: #f3f3f3; }
+.sf-card__action-btn--edit {
+  color: #0176d3;
+  border-color: #0176d3;
+}
+.sf-card__action-btn--edit:hover { background: #eef5fe; }
+
+/* ── Compact pills ─────────────────────────────────────────────────────────── */
+.sf-card__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 6px;
+}
+.sf-card__pill {
+  display: flex;
+  flex-direction: column;
+  min-width: 80px;
+}
+.sf-card__pill-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #706e6b;
+}
+.sf-card__pill-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #181818;
+  margin-top: 1px;
+}
+
+/* ── Full body ─────────────────────────────────────────────────────────────── */
+.sf-card__body { padding: 16px; }
+.sf-card__body--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .sf-card__body--grid { grid-template-columns: 1fr; }
+}
+
+.sf-card__field { display: flex; flex-direction: column; gap: 2px; }
+.sf-card__field-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #706e6b;
+}
+.sf-card__field-value {
+  font-size: 13px;
+  color: #181818;
+  margin: 0;
+}
+
+/* ── Field types ───────────────────────────────────────────────────────────── */
+.sf-card__link { color: #0176d3; text-decoration: none; }
+.sf-card__link:hover { text-decoration: underline; }
+.sf-card__empty { color: #c9c7c5; font-style: italic; }
+.sf-card__bool--true  { color: #27792b; font-weight: 600; }
+.sf-card__bool--false { color: #706e6b; }
+
+/* ── Skeleton ──────────────────────────────────────────────────────────────── */
+.sf-card--skeleton .sf-card__skeleton-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: sf-card-shimmer 1.4s infinite;
+  flex-shrink: 0;
+}
+.sf-card__skeleton-line {
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: sf-card-shimmer 1.4s infinite;
+  margin-bottom: 4px;
+}
+.sf-card__skeleton-line--title { width: 160px; height: 16px; }
+.sf-card__skeleton-line--sub   { width: 80px;  height: 11px; }
+.sf-card__skeleton-line--label { width: 60px;  height: 10px; }
+.sf-card__skeleton-line--value { width: 120px; height: 14px; }
+
+@keyframes sf-card-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

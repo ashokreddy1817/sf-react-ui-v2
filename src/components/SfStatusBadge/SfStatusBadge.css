@@ -1,0 +1,59 @@
+/* SfStatusBadge.css — SLDS 2 Cosmos color tokens */
+
+.sf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Salesforce Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 600;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  border: 1px solid transparent;
+  vertical-align: middle;
+}
+
+/* ── Sizes ─────────────────────────────────────────────────────────────────── */
+.sf-badge--small  { font-size: 10px; padding: 2px 8px; }
+.sf-badge--medium { font-size: 11px; padding: 3px 10px; }
+.sf-badge--large  { font-size: 12px; padding: 4px 12px; }
+
+/* ── Dot indicator ─────────────────────────────────────────────────────────── */
+.sf-badge__dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* ── Colors ────────────────────────────────────────────────────────────────── */
+/* green */
+.sf-badge--green   { background: #ebf7ee; color: #27792b; border-color: #91d795; }
+/* red */
+.sf-badge--red     { background: #fdf3f2; color: #ba0517; border-color: #fbd0ce; }
+/* orange / warning */
+.sf-badge--orange  { background: #fef6ee; color: #8a3800; border-color: #fdd9b5; }
+/* blue / info */
+.sf-badge--blue    { background: #eef5fe; color: #0056b3; border-color: #9fc8f8; }
+/* indigo */
+.sf-badge--indigo  { background: #f0eefe; color: #4d1db1; border-color: #c2b8f8; }
+/* purple */
+.sf-badge--purple  { background: #f5effe; color: #7526c9; border-color: #d4b1f7; }
+/* teal */
+.sf-badge--teal    { background: #e9f7f7; color: #0b7477; border-color: #90d8d8; }
+/* gray / neutral */
+.sf-badge--gray    { background: #f3f3f3; color: #444; border-color: #c9c7c5; }
+/* dark */
+.sf-badge--dark    { background: #2e2e2e; color: #fff; border-color: #2e2e2e; }
+/* success — alias for green */
+.sf-badge--success { background: #ebf7ee; color: #27792b; border-color: #91d795; }
+/* warning — alias for orange */
+.sf-badge--warning { background: #fef6ee; color: #8a3800; border-color: #fdd9b5; }
+/* error — alias for red */
+.sf-badge--error   { background: #fdf3f2; color: #ba0517; border-color: #fbd0ce; }
+/* info — alias for blue */
+.sf-badge--info    { background: #eef5fe; color: #0056b3; border-color: #9fc8f8; }

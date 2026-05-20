@@ -1,0 +1,87 @@
+/* SfChart.css */
+
+.sf-chart {
+  font-family: 'Salesforce Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #fff;
+  border: 1px solid #dddbda;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Header */
+.sf-chart__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f3f3;
+}
+.sf-chart__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #181818;
+}
+.sf-chart__meta {
+  font-size: 11px;
+  color: #706e6b;
+}
+.sf-chart__refresh {
+  font-size: 16px;
+  background: none;
+  border: none;
+  color: #706e6b;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.12s, color 0.12s;
+}
+.sf-chart__refresh:hover { background: #f3f3f3; color: #0176d3; }
+
+/* Body */
+.sf-chart__body { padding: 8px; }
+
+/* SVG */
+.sf-chart__svg { display: block; overflow: visible; }
+
+/* States */
+.sf-chart__error {
+  padding: 20px;
+  color: #c23934;
+  font-size: 13px;
+  background: #fdf3f2;
+}
+.sf-chart__empty {
+  padding: 40px;
+  text-align: center;
+  color: #706e6b;
+  font-size: 13px;
+}
+
+/* Skeleton */
+.sf-chart__skeleton {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  padding: 16px;
+  gap: 6px;
+}
+.sf-chart__skeleton-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+}
+.sf-chart__skeleton-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: sf-chart-shimmer 1.4s infinite;
+  min-height: 8px;
+}
+@keyframes sf-chart-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
