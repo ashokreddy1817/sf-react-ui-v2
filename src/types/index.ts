@@ -117,6 +117,8 @@ export interface SfContextValue {
   searchRecords: (objectName: string, query: string, limit?: number) => Promise<LookupResult[]>;
   getRelatedListInfo: (parentObjectName: string, relatedListId: string) => Promise<SfRelatedListInfo>;
   getRelatedListRecords: (parentRecordId: string, relatedListId: string, fields: string[]) => Promise<Record<string, unknown>[]>;
+  // Routes REST calls through apiClient so URL is always correct inside UIBundle
+  executeQuery: <T>(path: string) => Promise<T>;
 }
 
 // ─── SfRecordForm ─────────────────────────────────────────────────────────────
@@ -262,6 +264,7 @@ export interface SfRelatedListProps {
   onError?: (error: { message: string }) => void;
   className?: string;
 }
+
 // ─── SfStatusBadge ────────────────────────────────────────────────────────────
 export type SfBadgeColor =
   | 'green' | 'red' | 'orange' | 'blue' | 'indigo' | 'purple'
@@ -294,8 +297,8 @@ export interface SfRecordCardProps {
 }
 
 // ─── SfChart ──────────────────────────────────────────────────────────────────
-export type SfChartType      = 'bar' | 'pie' | 'donut' | 'line';
-export type SfAggregateType  = 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX';
+export type SfChartType     = 'bar' | 'pie' | 'donut' | 'line';
+export type SfAggregateType = 'COUNT' | 'SUM' | 'AVG' | 'MIN' | 'MAX';
 
 export interface SfChartProps {
   type?: SfChartType;
