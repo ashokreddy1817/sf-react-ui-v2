@@ -386,9 +386,6 @@ export function SfChart({
     const soql = buildSoql({ type, objectName, groupBy, aggregate, aggregateField, filter, maxGroups });
     const encoded = encodeURIComponent(soql);
 
-    sf.config; // reference to keep lint happy
-    // We reach directly into the API client via a raw fetch (SOQL query)
-    // SfContextValue doesn't expose a generic query() method — we use config.orgUrl
     const { orgUrl, apiVersion = '59.0', accessToken } = sf.config;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -396,16 +393,64 @@ export function SfChart({
     };
     if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
-    fetch(`${orgUrl.replace(/\/$/, '')}/services/data/v${apiVersion}/query/?q=${encoded}`, {
-      credentials: 'include',
-      headers,
-    })
-      .then((r) => r.json())
-      .then((json: { records: Array<Record<string, unknown>> }) => {
-        const pts: ChartPoint[] = (json.records ?? []).map((row) => ({
-          label: String(row[groupBy] ?? '(blank)'),
-          value: Number(row['val__'] ?? row['expr0'] ?? 0),
-        }));
+    fetch(
+      `${orgUrl.replace(/\/$/, '')}/services/data/v${apiVersion}/query/?q=${encoded}`,
+      { credentials: 'include', headers }
+    )
+      .then(async (res) => {
+        // Read the body as text first — avoids "Unexpected end of JSON input"
+        // when the response body is empty (e.g. 401 redirect, 204, etc.)
+        const text = await res.text();
+
+        if (!text) {
+          throw new Error(`Server returned status ${res.status} with an empty body. Check your orgUrl and accessToken in SfProvider.`);
+        }
+
+        let json: Record<string, unknown>;
+        try {
+          json = JSON.parse(text) as Record<string, unknown>;
+        } catch {
+          throw new Error(`Could not parse response as JSON (status ${res.status}). Body: ${text.slice(0, 120)}`);
+        }
+
+        // Salesforce returns error arrays for 4xx responses
+        if (!res.ok) {
+          const sfErrors = json as unknown as Array<{ message?: string; errorCode?: string }>;
+          const msg = Array.isArray(sfErrors) && sfErrors[0]?.message
+            ? `${sfErrors[0].errorCode ?? 'SF_ERROR'}: ${sfErrors[0].message}`
+            : `HTTP ${res.status} — ${res.statusText}`;
+          throw new Error(msg);
+        }
+
+        const records = (json['records'] as Array<Record<string, unknown>>) ?? [];
+
+        // Salesforce aggregate SOQL aliases —
+        //   alias used in SOQL  →  what SF actually returns on the row
+        //   COUNT(Id) val__     →  row.val__ OR row.expr0  (older API versions use expr0)
+        // We look for the alias first, then fall back to expr0, then any key that isn't
+        // the groupBy field or Salesforce metadata keys.
+        const SF_META_KEYS = new Set(['attributes', 'Id', groupBy]);
+
+        const pts: ChartPoint[] = records.map((row) => {
+          const label = row[groupBy] !== null && row[groupBy] !== undefined
+            ? String(row[groupBy])
+            : '(blank)';
+
+          // Try alias → expr0 → first non-meta numeric key
+          let value = 0;
+          if (row['val__'] !== undefined) {
+            value = Number(row['val__']);
+          } else if (row['expr0'] !== undefined) {
+            value = Number(row['expr0']);
+          } else {
+            // Last resort: first key that's not the groupBy or metadata
+            const aggKey = Object.keys(row).find((k) => !SF_META_KEYS.has(k));
+            if (aggKey) value = Number(row[aggKey]);
+          }
+
+          return { label, value: isNaN(value) ? 0 : value };
+        });
+
         setData(pts);
         setLoading(false);
       })
